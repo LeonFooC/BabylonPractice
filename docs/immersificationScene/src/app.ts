@@ -24,9 +24,9 @@ class App
     private _state: number = 0;
 
     // General Entire Application
-    private _scene: Scene;
-    private _gamescene: Scene;
+    private _currentScene: Scene;
     private _cutScene: Scene;
+    private _gamescene: Scene;
 
     //Game State Related
     public assets;
@@ -40,7 +40,7 @@ class App
 
         // initialize babylon scene and engine
         this._engine = new Engine(this._canvas, true);
-        this._scene = new Scene(this._engine);
+        this._currentScene = new Scene(this._engine);
 
         /*
          // ===================== Scene setup =====================
@@ -80,10 +80,10 @@ class App
         window.addEventListener("keydown", (ev) => {
             // Shift+Ctrl+Alt+I
             if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
-                if (this._scene.debugLayer.isVisible()) {
-                    this._scene.debugLayer.hide();
+                if (this._currentScene.debugLayer.isVisible()) {
+                    this._currentScene.debugLayer.hide();
                 } else {
-                    this._scene.debugLayer.show();
+                    this._currentScene.debugLayer.show();
                 }
             }
         });
@@ -101,22 +101,22 @@ class App
     }
 
     private async _main(): Promise<void> {
-        await this._goToStart();
+        await this._goToCutScene();
 
         // Register a render loop to repeatedly render the scene
         this._engine.runRenderLoop(() => {
             switch (this._state) {
                 case State.START:
-                    this._scene.render();
+                    this._currentScene.render();
                     break;
                 case State.CUTSCENE:
-                    this._scene.render();
+                    this._currentScene.render();
                     break;
                 case State.GAME:
-                    this._scene.render();
+                    this._currentScene.render();
                     break;
                 case State.LOSE:
-                    this._scene.render();
+                    this._currentScene.render();
                     break;
                 default: break;
             }
@@ -233,13 +233,12 @@ class App
 
         //--SCENE SETUP--
         //dont detect any inputs from this ui while the game is loading
-        this._scene.detachControl();
+        this._currentScene.detachControl();
         let scene = new Scene(this._engine);
         scene.clearColor = new Color4(0, 0, 0, 1);
         //creates and positions a free camera
         let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), scene);
         camera.setTarget(Vector3.Zero()); //targets the camera to scene origin
-
 
         //...do gui related stuff
         //create a fullscreen ui for all of our GUI elements
@@ -259,22 +258,68 @@ class App
         //this handles interactions with the start button attached to the scene
         startBtn.onPointerDownObservable.add(() => {
             this._goToCutScene();
-            scene.detachControl(); //observables disabled
+            //scene.detachControl(); //observables disabled
         });
 
         //--SCENE FINISHED LOADING--
         await scene.whenReadyAsync();
         this._engine.hideLoadingUI();
         //lastly set the current state to the start state and set the scene to the start scene
-        this._scene.dispose();
-        this._scene = scene;
+        this._currentScene.dispose();
+        this._currentScene = scene;
         this._state = State.START;
+    }
+
+    private async _goToCutScene(): Promise<void> {
+        //this._engine.displayLoadingUI();
+
+        //--SETUP SCENE--
+        //dont detect any inputs from this ui while the game is loading
+        //if (this._currentScene != null)
+            this._currentScene.detachControl();
+        this._cutScene = new Scene(this._engine);
+        let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), this._cutScene);
+        camera.setTarget(Vector3.Zero());
+        this._cutScene.clearColor = new Color4(0, 0, 0, 1);
+
+        //--GUI--
+        const cutScene = AdvancedDynamicTexture.CreateFullscreenUI("cutscene");
+
+        //--PROGRESS DIALOGUE--
+        const next = Button.CreateSimpleButton("next", "NEXT");
+        next.color = "white";
+        next.thickness = 0;
+        next.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        next.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        next.width = "64px";
+        next.height = "64px";
+        next.top = "-3%";
+        next.left = "-12%";
+        cutScene.addControl(next);
+
+        next.onPointerUpObservable.add(() => {
+            this._goToGame();
+        });
+
+        //--WHEN SCENE IS FINISHED LOADING--
+        await this._cutScene.whenReadyAsync();
+        //if (this._currentScene != null)
+            this._currentScene.dispose();
+        this._state = State.CUTSCENE;
+        this._currentScene = this._cutScene;
+
+        //--START LOADING AND SETTING UP THE GAME DURING THIS SCENE--
+        var finishedLoading = false;
+        await this._setUpGame().then(res => {
+            finishedLoading = true;
+
+        });
     }
 
     private async _goToGame()
     {
         //--SETUP SCENE--
-        this._scene.detachControl();
+        this._currentScene.detachControl();
         //this._scene.attachControl();
         let scene = this._gamescene;
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
@@ -313,19 +358,19 @@ class App
         scene.getMeshByName("outer").position = new Vector3(0, 3, -25);
 
         //get rid of start scene, switch to gamescene and change states
-        this._scene.dispose();
+        this._currentScene.dispose();
         this._state = State.GAME;
-        this._scene = scene;
+        this._currentScene = scene;
         this._engine.hideLoadingUI();
         //the game is ready, attach control back
-        this._scene.attachControl();
+        this._currentScene.attachControl();
     }
 
     private async _goToLose(): Promise<void> {
         this._engine.displayLoadingUI();
 
         //--SCENE SETUP--
-        this._scene.detachControl();
+        this._currentScene.detachControl();
         let scene = new Scene(this._engine);
         scene.clearColor = new Color4(0, 0, 0, 1);
         let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), scene);
@@ -347,52 +392,10 @@ class App
         await scene.whenReadyAsync();
         this._engine.hideLoadingUI(); //when the scene is ready, hide loading
         //lastly set the current state to the lose state and set the scene to the lose scene
-        this._scene.dispose();
-        this._scene = scene;
+        this._currentScene.dispose();
+        this._currentScene = scene;
         this._state = State.LOSE;
     }
 
-    private async _goToCutScene(): Promise<void> {
-        this._engine.displayLoadingUI();
-        //--SETUP SCENE--
-        //dont detect any inputs from this ui while the game is loading
-        this._scene.detachControl();
-        this._cutScene = new Scene(this._engine);
-        let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), this._cutScene);
-        camera.setTarget(Vector3.Zero());
-        this._cutScene.clearColor = new Color4(0, 0, 0, 1);
-
-        //--GUI--
-        const cutScene = AdvancedDynamicTexture.CreateFullscreenUI("cutscene");
-
-        //--PROGRESS DIALOGUE--
-        const next = Button.CreateSimpleButton("next", "NEXT");
-        next.color = "white";
-        next.thickness = 0;
-        next.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        next.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        next.width = "64px";
-        next.height = "64px";
-        next.top = "-3%";
-        next.left = "-12%";
-        cutScene.addControl(next);
-
-        next.onPointerUpObservable.add(() => {
-            this._goToGame();
-        });
-
-        //--WHEN SCENE IS FINISHED LOADING--
-        await this._cutScene.whenReadyAsync();
-        this._scene.dispose();
-        this._state = State.CUTSCENE;
-        this._scene = this._cutScene;
-
-        //--START LOADING AND SETTING UP THE GAME DURING THIS SCENE--
-        var finishedLoading = false;
-        await this._setUpGame().then(res => {
-            finishedLoading = true;
-
-        });
-    }
 }
 new App();
