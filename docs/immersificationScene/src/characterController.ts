@@ -1,7 +1,6 @@
-import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper } from "@babylonjs/core";
+import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper } from "@babylonjs/core";
 
-export class Player extends TransformNode
-{
+export class Player extends TransformNode {
     public camera: UniversalCamera;
     public scene: Scene;
     private _input;
@@ -37,10 +36,10 @@ export class Player extends TransformNode
     private lookTime: number = 2;
     private lookTimer: number = 0;
 
-    private vrHelper: VRExperienceHelper;
+    //private vrHelper: VRExperienceHelper;
+    private xrHelper: WebXRExperienceHelper;
 
-    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, input?)
-    {
+    constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, input?) {
         super("player", scene);
         this.scene = scene;
         this._setupPlayerCamera();
@@ -53,10 +52,8 @@ export class Player extends TransformNode
         this._input = input; //inputs we will get from inputController.ts
     }
 
-    public activatePlayerCamera(): UniversalCamera
-    {
-        this.scene.registerBeforeRender(() =>
-        {
+    public activatePlayerCamera(): UniversalCamera {
+        this.scene.registerBeforeRender(() => {
             this._beforeRenderUpdate();
             this._updateCamera();
 
@@ -64,8 +61,7 @@ export class Player extends TransformNode
         return this.camera;
     }
 
-    private _beforeRenderUpdate(): void
-    {
+    private _beforeRenderUpdate(): void {
         this._updateFromControls();
         //move our mesh
         this._updateGroundDetection();
@@ -78,28 +74,30 @@ export class Player extends TransformNode
         this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
         this.camera.position = Vector3.Lerp(this.camera.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
 
+        /*
         if (this.scene.activeCamera === this.vrHelper.vrDeviceOrientationCamera)
         {
-            FreeCameraDeviceOrientationInput.WaitForOrientationChangeAsync(1000)
-                //    .then(() =>
-                //{
+
+            FreeCameraDeviceOrientationInput.WaitForOrientationChangeAsync(1000);
             this.vrHelper.vrDeviceOrientationCamera.position = this._camRoot.position;
             this.vrHelper.vrDeviceOrientationCamera.rotation = this.camera.rotation;
 
-                //}).catch(() => {
-                //    alert("Device orientation camera is being used but no sensor is found, prompt user to enable in safari settings");
-                //})
-                ;
         }
         else
         {
             //this.scene.activeCamera.absoluteRotation.y = 0;
             this.scene.activeCamera = this.camera;
         }
+        */
+        //if (this.scene.activeCamera === this.xrHelper.camera) {
+        //    //Do stuff
+        //}
+        //else if (this.scene.activeCamera == this.camera) {
+        //    //Do stuff
+        //}
     }
 
-    private _setupPlayerCamera()
-    {
+    private async _setupPlayerCamera() {
         //root camera parent that handles positioning of the camera to follow the player
         this._camRoot = new TransformNode("root");
         this._camRoot.position = new Vector3(0, this.yOffest, -50); //initialized at (0,0,0)
@@ -124,8 +122,10 @@ export class Player extends TransformNode
 
         this.scene.activeCamera = this.camera;
 
-        //const env = this.scene.createDefaultEnvironment();
+        // XR camera setup here?
 
+        /*
+        //const env = this.scene.createDefaultEnvironment();
         //const xr = this.scene.createDefaultXRExperienceAsync();
         this.vrHelper = this.scene.createDefaultVRExperience(
             {
@@ -144,12 +144,23 @@ export class Player extends TransformNode
         //xrCamera.setTransformationFromNonVRCamera(scene.getCameraByName("cam"), true);
 
         this.vrHelper.vrDeviceOrientationCamera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+        */
+
+        try
+        {
+            this.xrHelper = await WebXRExperienceHelper.CreateAsync(this.scene);
+        }
+        catch (e)
+        {
+            // no XR support
+        }
+
+        const sessionManager = await this.xrHelper.enterXRAsync("immersive-vr", "local-floor" /*, optionalRenderTarget */);
 
         return this.camera;
     }
 
-    private _updateFromControls(): void
-    {
+    private _updateFromControls(): void {
         this._deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
 
         this._camRoot.rotation = this.camera.rotation;
@@ -163,13 +174,13 @@ export class Player extends TransformNode
         let fwd = this._camRoot.forward;
         let right = this._camRoot.right;
 
+        /*
         if (this.scene.activeCamera === this.vrHelper.vrDeviceOrientationCamera)
         {
             fwd = this.scene.activeCamera.getForwardRay(100).direction;
-            right = this.scene.activeCamera.getRightTarget().normalize();
-           //this.vrHelper.vrDeviceOrientationCamera.getFrontPosition(100).normalize;
-           //this.vrHelper.vrDeviceOrientationCamera.getRightTarget().normalize;
+            right = this.scene.activeCamera.getRightTarget().normalize();ss
         }
+        */
 
         let correctedVertical = fwd.scaleInPlace(this._v);
         let correctedHorizontal = right.scaleInPlace(this._h);
@@ -183,16 +194,13 @@ export class Player extends TransformNode
         //clamp the input value so that diagonal movement isn't twice as fast
         let inputMag = Math.abs(this._h) + Math.abs(this._v);
 
-        if (inputMag < 0)
-        {
+        if (inputMag < 0) {
             this._inputAmt = 0;
         }
-        else if (inputMag > 1)
-        {
+        else if (inputMag > 1) {
             this._inputAmt = 1;
         }
-        else
-        {
+        else {
             this._inputAmt = inputMag;
         }
 
@@ -203,8 +211,7 @@ export class Player extends TransformNode
         //check if there is movement to determine if rotation is needed
         let input = new Vector3(this._input.horizontalAxis, 0, this._input.verticalAxis); //along which axis is the direction
 
-        if (input.length() == 0)
-        {//if there's no input detected, prevent rotation and keep player in same rotation
+        if (input.length() == 0) {//if there's no input detected, prevent rotation and keep player in same rotation
             return;
         }
         //rotation based on input & the camera angle
@@ -215,8 +222,7 @@ export class Player extends TransformNode
 
     }
 
-    private _updateGroundDetection(): void
-    {
+    private _updateGroundDetection(): void {
         if (!this._isGrounded()) {
             this._gravity = this._gravity.addInPlace(Vector3.Up().scale(this._deltaTime * Player.GRAVITY));
             this._grounded = false;
@@ -229,16 +235,14 @@ export class Player extends TransformNode
 
         this.mesh.moveWithCollisions(this._moveDirection.addInPlace(this._gravity));
 
-        if (this._isGrounded())
-        {
+        if (this._isGrounded()) {
             this._gravity.y = 0;
             this._grounded = true;
             this._lastGroundPos.copyFrom(this.mesh.position);
         }
     }
 
-    private _floorRaycast(offsetx: number, offsetz: number, raycastlen: number): Vector3
-    {
+    private _floorRaycast(offsetx: number, offsetz: number, raycastlen: number): Vector3 {
         let raycastFloorPos = new Vector3(this.mesh.position.x + offsetx, this.mesh.position.y + 0.5, this.mesh.position.z + offsetz);
         let ray = new Ray(raycastFloorPos, Vector3.Up().scale(-1), raycastlen);
 
@@ -254,35 +258,28 @@ export class Player extends TransformNode
         }
     }
 
-    private _isGrounded(): boolean
-    {
-        if (this._floorRaycast(0, 0, 0.6).equals(Vector3.Zero()))
-        {
+    private _isGrounded(): boolean {
+        if (this._floorRaycast(0, 0, 0.6).equals(Vector3.Zero())) {
             return false;
         }
-        else
-        {
+        else {
             return true;
         }
     }
 
-    private LookRaycast(raycastlen: number): Vector3
-    {
+    private LookRaycast(raycastlen: number): Vector3 {
         let rayPos = this.camera.position;
         let ray = new Ray(rayPos, this.scene.activeCamera.getForwardRay(1).direction, raycastlen);
 
-        let predicate = function (mesh)
-        {
+        let predicate = function (mesh) {
             return mesh.isPickable && mesh.isEnabled();
         }
         let pick = this.scene.pickWithRay(ray, predicate);
 
-        if (pick.hit)
-        {
+        if (pick.hit) {
             this.lookTimer = this.lookTime + this._deltaTime;
 
-            if (this.lookTimer >= this.lookTime)
-            {
+            if (this.lookTimer >= this.lookTime) {
                 let hitMat = new StandardMaterial("hitMat", this._scene);
                 hitMat.diffuseColor = new Color3(1, 0, 0.46);
                 pick.pickedMesh.material = hitMat;
@@ -292,13 +289,10 @@ export class Player extends TransformNode
 
             return pick.pickedPoint;
         }
-        else
-        {
-            if (this.lookTimer > 0)
-            {
+        else {
+            if (this.lookTimer > 0) {
                 this.lookTimer -= this._deltaTime;
-                if (this.lookTimer < 0)
-                {
+                if (this.lookTimer < 0) {
                     this.lookTimer = 0;
                 }
             }

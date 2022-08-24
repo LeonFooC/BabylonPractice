@@ -303,7 +303,7 @@ class App
 
         //--WHEN SCENE IS FINISHED LOADING--
         await this._cutScene.whenReadyAsync();
-        //if (this._currentScene != null)
+        if (this._currentScene != null)
             this._currentScene.dispose();
         this._state = State.CUTSCENE;
         this._currentScene = this._cutScene;
