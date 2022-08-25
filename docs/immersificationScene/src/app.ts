@@ -324,6 +324,7 @@ class App
         let scene = this._gamescene;
         scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098); // a color that fit the overall color scheme better
 
+        /*
         //--GUI--
         const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         scene.detachControl();
@@ -344,6 +345,7 @@ class App
             this._goToLose();
             scene.detachControl(); //observables disabled
         });
+        */
 
         //--INPUT--
         this._input = new PlayerInput(scene); //detect keyboard/mobile inputs

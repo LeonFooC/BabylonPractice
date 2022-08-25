@@ -1,4 +1,4 @@
-import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper } from "@babylonjs/core";
+import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper, MeshBuilder, WebXRDefaultExperience } from "@babylonjs/core";
 
 export class Player extends TransformNode {
     public camera: UniversalCamera;
@@ -36,13 +36,15 @@ export class Player extends TransformNode {
     private lookTime: number = 2;
     private lookTimer: number = 0;
 
-    //private vrHelper: VRExperienceHelper;
+    private vrHelper: VRExperienceHelper;
     private xrHelper: WebXRExperienceHelper;
 
     constructor(assets, scene: Scene, shadowGenerator: ShadowGenerator, input?) {
         super("player", scene);
         this.scene = scene;
         this._setupPlayerCamera();
+
+        //const sessionManager = await this.xrHelper.enterXRAsync("immersive-vr", "local-floor" /*, optionalRenderTarget */);
 
         this.mesh = assets.mesh;
         this.mesh.parent = this;
@@ -74,7 +76,7 @@ export class Player extends TransformNode {
         this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
         this.camera.position = Vector3.Lerp(this.camera.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
 
-        /*
+        
         if (this.scene.activeCamera === this.vrHelper.vrDeviceOrientationCamera)
         {
 
@@ -88,7 +90,7 @@ export class Player extends TransformNode {
             //this.scene.activeCamera.absoluteRotation.y = 0;
             this.scene.activeCamera = this.camera;
         }
-        */
+        
         //if (this.scene.activeCamera === this.xrHelper.camera) {
         //    //Do stuff
         //}
@@ -97,7 +99,7 @@ export class Player extends TransformNode {
         //}
     }
 
-    private async _setupPlayerCamera() {
+    private _setupPlayerCamera() {
         //root camera parent that handles positioning of the camera to follow the player
         this._camRoot = new TransformNode("root");
         this._camRoot.position = new Vector3(0, this.yOffest, -50); //initialized at (0,0,0)
@@ -146,16 +148,34 @@ export class Player extends TransformNode {
         this.vrHelper.vrDeviceOrientationCamera.inputs.removeByType("FreeCameraKeyboardMoveInput");
         */
 
-        try
-        {
-            this.xrHelper = await WebXRExperienceHelper.CreateAsync(this.scene);
+        var useXR = false;
+        try {
+            if (useXR) {
+
+                const xr = this.scene.createDefaultXRExperienceAsync();
+
+                const box = MeshBuilder.CreateCapsule("2rdfe", {}, this._scene);
+                box.position = new Vector3(0, 5, 0);
+
+                const bbox = MeshBuilder.CreateCapsule("capascd", {}, this._scene);
+                bbox.position = new Vector3(0, 10, 0);
+            }
+            else {
+                this.vrHelper = this.scene.createDefaultVRExperience(
+                    {
+                        createDeviceOrientationCamera: false, useXR: true
+                    });
+            }
+            //const box = MeshBuilder.CreateCapsule("cap", {}, this._scene);
+            //box.position = new Vector3(0, 10, 0);
         }
-        catch (e)
-        {
+        catch (e) {
+            console.log(e);
             // no XR support
+            //const box = MeshBuilder.CreateDisc("disc", {}, this._scene);
+            //box.position = new Vector3(0, 6, 0);
         }
 
-        const sessionManager = await this.xrHelper.enterXRAsync("immersive-vr", "local-floor" /*, optionalRenderTarget */);
 
         return this.camera;
     }
@@ -173,14 +193,12 @@ export class Player extends TransformNode {
         //--MOVEMENTS BASED ON CAMERA (as it rotates)--
         let fwd = this._camRoot.forward;
         let right = this._camRoot.right;
-
-        /*
+                
         if (this.scene.activeCamera === this.vrHelper.vrDeviceOrientationCamera)
         {
             fwd = this.scene.activeCamera.getForwardRay(100).direction;
-            right = this.scene.activeCamera.getRightTarget().normalize();ss
+            right = this.scene.activeCamera.getRightTarget().normalize();
         }
-        */
 
         let correctedVertical = fwd.scaleInPlace(this._v);
         let correctedHorizontal = right.scaleInPlace(this._h);
