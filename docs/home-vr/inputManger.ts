@@ -1,6 +1,6 @@
 import { Scene, ActionManager, ExecuteCodeAction, Observer, Scalar } from 'babylonjs';
 
-export class InputController
+export class InputManger
 {
     public inputMap: any;
     private _scene: Scene;

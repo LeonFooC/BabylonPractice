@@ -19,18 +19,17 @@ export declare class CharacterController extends TransformNode {
     private _lastGroundPos;
     private _grounded;
     private readonly yOffest;
-    private lookTime;
-    private lookTimer;
+    private useGravity;
     constructor(pawn: any, scene: Scene, createCamera: boolean, input?: any);
     SetupBeforeRenderUpdateLoop(): void;
     private UpdatePhysics;
     private UpdateCamera;
     private SetupCharacterCameraRoot;
     private CreateCharacterCamera;
-    AssignCameraToCharacter(camera: UniversalCamera): void;
+    AssignCameraToController(camera: UniversalCamera): void;
     private UpdateFromControls;
     private UpdateGroundDetection;
     private _floorRaycast;
     private _isGrounded;
-    private LookRaycast;
+    private HitRaycast;
 }

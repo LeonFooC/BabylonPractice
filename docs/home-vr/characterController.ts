@@ -1,5 +1,4 @@
 import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper, MeshBuilder, WebXRDefaultExperience } from "babylonjs";
-import { Pawn } from "./pawn";
 
 export class CharacterController extends TransformNode {
     public camera: UniversalCamera;
@@ -34,8 +33,7 @@ export class CharacterController extends TransformNode {
 
     private readonly yOffest: number = 1.7;
 
-    private lookTime: number = 2;
-    private lookTimer: number = 0;
+    private useGravity: boolean = false;
 
     constructor(pawn, scene: Scene, createCamera: boolean, input?)
     {
@@ -50,11 +48,6 @@ export class CharacterController extends TransformNode {
             this.CreateCharacterCamera();
         }
 
-        console.log("-------------");
-        console.log(pawn);
-        console.log(this.mesh);
-        console.log(this.mesh.position);
-
         ////shadowGenerator.addShadowCaster(pawnBody.mesh); //the player mesh will cast shadows
 
         this.input = input; //inputs we will get from inputController.ts
@@ -66,7 +59,7 @@ export class CharacterController extends TransformNode {
             this.UpdateCamera();
 
             // cheap and dirty way to test look interaction
-            this.LookRaycast(10);
+            this.HitRaycast(10);
         })
     }
 
@@ -169,7 +162,7 @@ export class CharacterController extends TransformNode {
         return this.camera;
     }
 
-    public AssignCameraToCharacter(camera: UniversalCamera) {
+    public AssignCameraToController(camera: UniversalCamera) {
 
         this.camera = camera
 
@@ -251,7 +244,14 @@ export class CharacterController extends TransformNode {
             this._gravity.y = -CharacterController.JUMP_FORCE;
         }
 
-        this.mesh.moveWithCollisions(this.moveDirection.addInPlace(this._gravity));
+        if (this.useGravity) {
+
+            this.mesh.moveWithCollisions(this.moveDirection.addInPlace(this._gravity));
+        }
+        else {
+            this.mesh.moveWithCollisions(this.moveDirection);
+        }
+
 
         if (this._isGrounded()) {
             this._gravity.y = 0;
@@ -285,7 +285,7 @@ export class CharacterController extends TransformNode {
         }
     }
 
-    private LookRaycast(raycastlen: number): Vector3 {
+    private HitRaycast(raycastlen: number): Vector3 {
         let rayPos = this.camera.position;
         let ray = new Ray(rayPos, this.scene.activeCamera.getForwardRay(1).direction, raycastlen);
 
@@ -296,11 +296,9 @@ export class CharacterController extends TransformNode {
 
         if (pick.hit)
         {
-            let hitMat = new StandardMaterial("hitMat", this._scene);
+            let hitMat = new StandardMaterial("hitMat", this.scene);
             hitMat.diffuseColor = new Color3(1, 0, 0.46);
             pick.pickedMesh.material = hitMat;
-
-            this.lookTimer = 0;
 
 
             return pick.pickedPoint;

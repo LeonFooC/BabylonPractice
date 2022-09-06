@@ -1,6 +1,8 @@
+import { Mesh } from 'babylonjs';
 import 'babylonjs-loaders';
 export declare class Pawn {
-    mainBody: any;
-    Build(scene: any): Promise<void>;
-    private load;
+    collisionMesh: Mesh;
+    scene: any;
+    constructor(scene: any);
+    private BuildCollision;
 }
