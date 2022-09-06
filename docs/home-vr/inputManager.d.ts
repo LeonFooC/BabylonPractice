@@ -1,5 +1,5 @@
 import { Scene } from 'babylonjs';
-export declare class InputManger {
+export declare class InputManager {
     inputMap: any;
     private _scene;
     horizontal: number;

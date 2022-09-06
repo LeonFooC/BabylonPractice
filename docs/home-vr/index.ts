@@ -3,7 +3,7 @@ import { AdvancedDynamicTexture, Ellipse, TextBlock } from 'babylonjs-gui';
 import 'babylonjs-loaders';
 import { GradientMaterial } from 'babylonjs-materials';
 import { CharacterController } from "./characterController";
-import { InputManger } from "./inputManger";
+import { InputManager } from "./inputManager";
 import { Pawn } from "./pawn";
 
 const canvas: any = document.getElementById("renderCanvas");
@@ -77,7 +77,7 @@ async function createScene() {
     //window['input'] = inputManager;
     
     //Create input detector/manager
-    const inputManager = new InputManger(scene);
+    const inputManager = new InputManager(scene);
 
     const playerPawn = new Pawn(scene);
     playerPawn.collisionMesh.position = new Vector3(0, playerPawn.collisionMesh.position.y, -8);
