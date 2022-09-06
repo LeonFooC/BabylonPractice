@@ -2,6 +2,9 @@ import { Engine, WebXRSessionManager, Scene, FreeCamera, Vector3, HemisphericLig
 import { AdvancedDynamicTexture, Ellipse, TextBlock } from 'babylonjs-gui';
 import 'babylonjs-loaders';
 import { GradientMaterial } from 'babylonjs-materials';
+import { CharacterController } from "./characterController";
+import { InputController } from "./inputController";
+import { Pawn } from "./pawn";
 
 const canvas: any = document.getElementById("renderCanvas");
 const engine: Engine = new Engine(canvas, true);
@@ -50,29 +53,35 @@ async function createScene() {
     scene.fogEnd = 750;
     scene.fogColor = new Color3(169 / 255, 133 / 255, 90 / 255);
 
-    // const camera = new FreeCamera('freeCamera', new Vector3(0, 5, -10), scene);
-    const camera = new UniversalCamera('uniCamera', new Vector3(0, 5, -10), scene);
-    // const camera = new VRDeviceOrientationFreeCamera('vrFreeCamera', new Vector3(0, 5, -10), scene);
-    // const xrSessionManager = new WebXRSessionManager(scene);
-    // const camera = new WebXRCamera('xrCamera', scene, xrSessionManager);
-    // camera.setTransformationFromNonVRCamera();
-    // // for debug
-    // console.log(camera.getDirection(Axis.Z));
-    // console.log(camera.getFrontPosition(2));
-    // console.log(camera.realWorldHeight);
+    //// const camera = new FreeCamera('freeCamera', new Vector3(0, 5, -10), scene);
+    //const camera = new UniversalCamera('uniCamera', new Vector3(0, 5, -10), scene);
+    //// const camera = new VRDeviceOrientationFreeCamera('vrFreeCamera', new Vector3(0, 5, -10), scene);
+    //// const xrSessionManager = new WebXRSessionManager(scene);
+    //// const camera = new WebXRCamera('xrCamera', scene, xrSessionManager);
+    //// camera.setTransformationFromNonVRCamera();
+    //// // for debug
+    //// console.log(camera.getDirection(Axis.Z));
+    //// console.log(camera.getFrontPosition(2));
+    //// console.log(camera.realWorldHeight);
 
-    camera.setTarget(Vector3.Zero());
-    camera.attachControl(canvas, true);
-    const inputManager = camera.inputs;
-    const kb = inputManager.attached.keyboard;
-    kb['keysLeft'] = [65];
-    kb['keysRight'] = [68];
-    kb['keysUp'] = [87];
-    kb['keysDown'] = [83];
+    //camera.setTarget(Vector3.Zero());
+    //camera.attachControl(canvas, true);
 
-    // for debug
-    window['input'] = inputManager;
+    //const inputManager = camera.inputs;
+    //const kb = inputManager.attached.keyboard;
+    //kb['keysLeft'] = [65];
+    //kb['keysRight'] = [68];
+    //kb['keysUp'] = [87];
+    //kb['keysDown'] = [83];
 
+    //// for debug
+    //window['input'] = inputManager;
+
+    //Create input detection
+    const inputController = new InputController(scene);
+    //Create a pawn and than a controller for the player to control
+    const playerPawn = new Pawn(scene);
+    const playerController = new CharacterController(playerPawn.mainBody, scene, inputController)
 
     // create a fuse cursor
     // add a circle reticle using the Fullscreen mode UI
