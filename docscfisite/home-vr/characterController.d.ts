@@ -1,0 +1,34 @@
+import { TransformNode, Scene, Mesh, UniversalCamera } from "babylonjs";
+export declare class CharacterController extends TransformNode {
+    camera: UniversalCamera;
+    scene: Scene;
+    private _input;
+    mesh: Mesh;
+    private _camRoot;
+    private _yTilt;
+    private static readonly PLAYER_SPEED;
+    private static readonly JUMP_FORCE;
+    private static readonly GRAVITY;
+    private static readonly ORIGINAL_TILT;
+    private _deltaTime;
+    private _h;
+    private _v;
+    private _moveDirection;
+    private _inputAmt;
+    private _gravity;
+    private _lastGroundPos;
+    private _grounded;
+    private readonly yOffest;
+    private lookTime;
+    private lookTimer;
+    constructor(pawnBody: any, scene: Scene, input?: any);
+    activatePlayerCamera(): UniversalCamera;
+    private _updatePhysics;
+    private _updateCamera;
+    private _setupPlayerCamera;
+    private _updateFromControls;
+    private _updateGroundDetection;
+    private _floorRaycast;
+    private _isGrounded;
+    private LookRaycast;
+}
