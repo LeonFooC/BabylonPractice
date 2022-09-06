@@ -5,7 +5,7 @@ export class Pawn {
 
     public mainBody;
 
-    constructor(scene)
+    public async Build(scene)
     {
         //this.scene = scene;
         this.load(scene);
@@ -30,13 +30,13 @@ export class Pawn {
 
             main.rotationQuaternion = new Quaternion(0, 1, 0, 0); // rotate the player mesh 180 since we want to see the back of the player
 
-            //// Create meshes and generate models
-            //var body = Mesh.CreateCylinder("body", 3, 2, 2, 0, 0, scene);
-            //var bodymtl = new StandardMaterial("red", scene);
-            //bodymtl.diffuseColor = new Color3(.8, .5, .5);
-            //body.material = bodymtl;
-            //body.isPickable = false;
-            //body.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0)); // simulates the imported mesh's origin
+            // Create meshes and generate models
+            var body = Mesh.CreateCylinder("body", 3, 2, 2, 0, 0, scene);
+            var bodymtl = new StandardMaterial("red", scene);
+            bodymtl.diffuseColor = new Color3(.8, .5, .5);
+            body.material = bodymtl;
+            body.isPickable = false;
+            body.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0)); // simulates the imported mesh's origin
 
             //// temp indicator to know our forward direction
             //var box = MeshBuilder.CreateBox("nose", { width: 0.5, depth: 0.5, height: 0.25, faceColors: [new Color4(0, 0, 0, 1), new Color4(0, 0, 0, 1), new Color4(0, 0, 0, 1), new Color4(0, 0, 0, 1), new Color4(0, 0, 0, 1), new Color4(0, 0, 0, 1)] }, scene);
@@ -45,7 +45,7 @@ export class Pawn {
 
             ////parent the meshes
             //box.parent = body;
-            //body.parent = main;
+            body.parent = main;
 
             return { mesh: main as Mesh }
         }

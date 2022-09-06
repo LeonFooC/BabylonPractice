@@ -1,10 +1,10 @@
-import { Engine, WebXRSessionManager, Scene, FreeCamera, Vector3, HemisphericLight, MeshBuilder, SceneLoader, Color3, PointLight, WebXRCamera, Axis, UniversalCamera, VRDeviceOrientationFreeCamera, FreeCameraKeyboardMoveInput } from 'babylonjs';
+import { Engine, WebXRSessionManager, Scene, FreeCamera, Vector3, HemisphericLight, MeshBuilder, SceneLoader, Color3, PointLight, WebXRCamera, Axis, UniversalCamera, VRDeviceOrientationFreeCamera, FreeCameraKeyboardMoveInput, StandardMaterial, Matrix, Quaternion, Mesh } from 'babylonjs';
 import { AdvancedDynamicTexture, Ellipse, TextBlock } from 'babylonjs-gui';
 import 'babylonjs-loaders';
 import { GradientMaterial } from 'babylonjs-materials';
 import { CharacterController } from "./characterController";
 import { InputController } from "./inputController";
-import { Pawn } from "./pawn";
+//import { Pawn } from "./pawn";
 
 const canvas: any = document.getElementById("renderCanvas");
 const engine: Engine = new Engine(canvas, true);
@@ -53,20 +53,19 @@ async function createScene() {
     scene.fogEnd = 750;
     scene.fogColor = new Color3(169 / 255, 133 / 255, 90 / 255);
 
-    //// const camera = new FreeCamera('freeCamera', new Vector3(0, 5, -10), scene);
-    //const camera = new UniversalCamera('uniCamera', new Vector3(0, 5, -10), scene);
-    //// const camera = new VRDeviceOrientationFreeCamera('vrFreeCamera', new Vector3(0, 5, -10), scene);
-    //// const xrSessionManager = new WebXRSessionManager(scene);
-    //// const camera = new WebXRCamera('xrCamera', scene, xrSessionManager);
-    //// camera.setTransformationFromNonVRCamera();
-    //// // for debug
-    //// console.log(camera.getDirection(Axis.Z));
-    //// console.log(camera.getFrontPosition(2));
-    //// console.log(camera.realWorldHeight);
+    // const camera = new FreeCamera('freeCamera', new Vector3(0, 5, -10), scene);
+    const camera = new UniversalCamera('uniCamera', new Vector3(0, 5, -10), scene);
+    // const camera = new VRDeviceOrientationFreeCamera('vrFreeCamera', new Vector3(0, 5, -10), scene);
+    // const xrSessionManager = new WebXRSessionManager(scene);
+    // const camera = new WebXRCamera('xrCamera', scene, xrSessionManager);
+    // camera.setTransformationFromNonVRCamera();
+    // // for debug
+    // console.log(camera.getDirection(Axis.Z));
+    // console.log(camera.getFrontPosition(2));
+    // console.log(camera.realWorldHeight);
 
     //camera.setTarget(Vector3.Zero());
-    //camera.attachControl(canvas, true);
-
+    camera.attachControl(canvas, true);
     //const inputManager = camera.inputs;
     //const kb = inputManager.attached.keyboard;
     //kb['keysLeft'] = [65];
@@ -77,11 +76,36 @@ async function createScene() {
     //// for debug
     //window['input'] = inputManager;
 
+    const box = MeshBuilder.CreateBox("box", {}, scene); //unit cube
+    box.scaling = new Vector3(3, 3, 3);
+    box.position.z = 12;
+    
     //Create input detection
     const inputController = new InputController(scene);
-    //Create a pawn and than a controller for the player to control
-    const playerPawn = new Pawn(scene);
-    const playerController = new CharacterController(playerPawn.mainBody, scene, inputController)
+
+    //Create a pawn for controlling
+    //Set generate collision only, so disable mesh visability
+    const main = MeshBuilder.CreateBox("pawnCollider", { width: 2, depth: 1, height: 3 }, scene);
+    main.isVisible = false;
+    main.isPickable = false;
+    main.checkCollisions = true;
+    //move origin of box collider to the bottom of the mesh (to match player mesh)
+    main.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))
+    //for collisions
+    main.ellipsoid = new Vector3(1, 1.5, 1);
+    main.ellipsoidOffset = new Vector3(0, 1.5, 0);
+    main.rotationQuaternion = new Quaternion(0, 1, 0, 0); // rotate the player mesh 180 since we want to see the back of the player
+
+    //Create controller to control pawn
+    const playerController = new CharacterController(main, scene, false, inputController);
+    playerController.AssignCameraToCharacter(camera);
+    playerController.SetupBeforeRenderUpdateLoop();
+    
+
+    var ground = MeshBuilder.CreateGround("ground", { width: 70, height: 70 }, scene);
+    let groundMaterial = new StandardMaterial("Ground Material", scene);
+    groundMaterial.diffuseColor = new Color3(0.87, 0.73, 0.46);
+    ground.material = groundMaterial;
 
     // create a fuse cursor
     // add a circle reticle using the Fullscreen mode UI
@@ -105,7 +129,7 @@ async function createScene() {
     // const sphere = Mesh.CreateSphere("sphere1", 16, 2, scene);
     // const sphere = MeshBuilder.CreateSphere("sphere", { segments: 16, diameter: 1 }, scene);
     // sphere.position.y = 1;
-
+    
     SceneLoader.ImportMeshAsync('', 'assets/models/little_shed/', 'scene.gltf', scene).then(result => {
         const root = result.meshes[0];
         root.addRotation(0, -Math.PI / 2, Math.PI);

@@ -1,15 +1,16 @@
 import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper, MeshBuilder, WebXRDefaultExperience } from "babylonjs";
+import { Pawn } from "./pawn";
 
 export class CharacterController extends TransformNode {
     public camera: UniversalCamera;
     public scene: Scene;
-    private _input;
+    private input;
 
     //Player
     public mesh: Mesh; //outer collisionbox of player
 
     //Camera
-    private _camRoot: TransformNode;
+    private camTransformDummy: TransformNode;
     private _yTilt: TransformNode;
 
     //const values
@@ -19,11 +20,11 @@ export class CharacterController extends TransformNode {
     private static readonly ORIGINAL_TILT: Vector3 = new Vector3(0.5934119456780721, 0, 0);
 
     //player movement vars
-    private _deltaTime: number = 0;
+    private deltaTime: number = 0;
     private _h: number;
     private _v: number;
 
-    private _moveDirection: Vector3 = new Vector3();
+    private moveDirection: Vector3 = new Vector3();
     private _inputAmt: number;
 
     //gravity, ground detection, jumping
@@ -36,54 +37,63 @@ export class CharacterController extends TransformNode {
     private lookTime: number = 2;
     private lookTimer: number = 0;
 
-    constructor(pawnBody, scene: Scene, input?)
+    constructor(pawn, scene: Scene, createCamera: boolean, input?)
     {
-        super("player", scene);
+        super("playerController", scene);
         this.scene = scene;
-        this._setupPlayerCamera();
 
-        this.mesh = pawnBody.mesh;
+        this.mesh = pawn;
         this.mesh.parent = this;
 
-        //shadowGenerator.addShadowCaster(pawnBody.mesh); //the player mesh will cast shadows
+        this.SetupCharacterCameraRoot();
+        if (createCamera) {
+            this.CreateCharacterCamera();
+        }
 
-        this._input = input; //inputs we will get from inputController.ts
+        console.log("-------------");
+        console.log(pawn);
+        console.log(this.mesh);
+        console.log(this.mesh.position);
+
+        ////shadowGenerator.addShadowCaster(pawnBody.mesh); //the player mesh will cast shadows
+
+        this.input = input; //inputs we will get from inputController.ts
     }
 
-    public activatePlayerCamera(): UniversalCamera {
+    public SetupBeforeRenderUpdateLoop() {
         this.scene.registerBeforeRender(() => {
-            this._updatePhysics();
-            this._updateCamera();
+            this.UpdatePhysics();
+            this.UpdateCamera();
 
+            // cheap and dirty way to test look interaction
+            this.LookRaycast(10);
         })
-        return this.camera;
     }
 
-    private _updatePhysics(): void {
+    private UpdatePhysics(): void {
 
         // Get inputs
-        this._updateFromControls();
+        this.UpdateFromControls();
 
         //move our mesh
-        this._updateGroundDetection();
-
-        // cheap and dirty way to test look interaction
-        this.LookRaycast(10);
+        this.UpdateGroundDetection();
     }
 
-    private _updateCamera(): void {
-        let centerPlayer = this.mesh.position.y + this.yOffest;
-        this._camRoot.position = Vector3.Lerp(this._camRoot.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
-        this.camera.position = Vector3.Lerp(this.camera.position, new Vector3(this.mesh.position.x, centerPlayer, this.mesh.position.z), 0.4);
+    private UpdateCamera(): void {
+        let characterCenter = this.mesh.position.y + this.yOffest;
+        //this.camTransformDummy.position = Vector3.Lerp(this.camTransformDummy.position, new Vector3(this.mesh.position.x, characterCenter, this.mesh.position.z), 0.4);
+        this.camTransformDummy.position = this.camera.position = Vector3.Lerp(this.camera.position, new Vector3(this.mesh.position.x, characterCenter, this.mesh.position.z), 0.4);
     }
 
-    private _setupPlayerCamera() {
+    private SetupCharacterCameraRoot() {
         //root camera parent that handles positioning of the camera to follow the player
-        this._camRoot = new TransformNode("root");
-        this._camRoot.position = new Vector3(0, this.yOffest, -50); //initialized at (0,0,0)
+        this.camTransformDummy = new TransformNode("cameraRoot");
+        this.camTransformDummy.position = new Vector3(0, this.yOffest, -50); //initialized at (0,0,0)
         //to face the player from behind (180 degrees)
-        this._camRoot.rotation = new Vector3(0, Math.PI, 0);
+        this.camTransformDummy.rotation = new Vector3(0, Math.PI, 0);
+}
 
+    private CreateCharacterCamera() {
         ////rotations along the x-axis (up/down tilting)
         //let yTilt = new TransformNode("ytilt");
         ////adjustments to camera view to point down at our player
@@ -93,12 +103,10 @@ export class CharacterController extends TransformNode {
 
         //our actual camera that's pointing at our root's position
         this.camera = new UniversalCamera("characterCamera", new Vector3(0, this.yOffest, -50), this.scene);
-        //this.camera.lockedTarget = this._camRoot.position;
-        this.camera.fov = .9;
-        //this.camera.parent = this._camRoot;
 
+        this.camera.position = this.camTransformDummy.position;
+        this.camera.fov = .9;
         this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
-        //this.camera.inputs.removeByType("FreeCameraMouseInput");
 
         this.scene.activeCamera = this.camera;
 
@@ -156,29 +164,40 @@ export class CharacterController extends TransformNode {
         }
         */
 
+        this.UpdateCamera();
 
         return this.camera;
     }
 
-    private _updateFromControls(): void {
-        this._deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
+    public AssignCameraToCharacter(camera: UniversalCamera) {
 
-        this._camRoot.rotation = this.camera.rotation;
+        this.camera = camera
 
-        this._moveDirection = Vector3.Zero(); // vector that holds movement information
-        this._h = this._input.horizontal; //x-axis
-        this._v = this._input.vertical; //z-axis
+        this.camera.position = this.camTransformDummy.position;
+        this.camTransformDummy.rotation = new Vector3(0, Math.PI, 0);
+        this.camera.fov = .9;
+
+        //remoce keyboard (movement) input from camera
+        this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+
+        this.scene.activeCamera = this.camera;
+
+        this.UpdateCamera();
+    }
+
+    private UpdateFromControls(): void {
+        this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
+
+        this.camTransformDummy.rotation = this.camera.rotation;
+
+        this.moveDirection = Vector3.Zero(); // vector that holds movement information
+        this._h = this.input.horizontal; //x-axis
+        this._v = this.input.vertical; //z-axis
 
 
         //--MOVEMENTS BASED ON CAMERA (as it rotates)--
-        let fwd = this._camRoot.forward;
-        let right = this._camRoot.right;
-                
-        //if (this.scene.activeCamera === this.vrHelper.vrDeviceOrientationCamera)
-        //{
-        //    fwd = this.scene.activeCamera.getForwardRay(100).direction;
-        //    right = this.scene.activeCamera.getRightTarget().normalize();
-        //}
+        let fwd = this.camTransformDummy.forward;
+        let right = this.camTransformDummy.right;
 
         let correctedVertical = fwd.scaleInPlace(this._v);
         let correctedHorizontal = right.scaleInPlace(this._h);
@@ -187,7 +206,7 @@ export class CharacterController extends TransformNode {
         let move = correctedHorizontal.addInPlace(correctedVertical);
 
         //clear y so that the character doesnt fly up, normalize for next step
-        this._moveDirection = new Vector3((move).normalize().x, 0, (move).normalize().z);
+        this.moveDirection = new Vector3((move).normalize().x, 0, (move).normalize().z);
 
         //clamp the input value so that diagonal movement isn't twice as fast
         let inputMag = Math.abs(this._h) + Math.abs(this._v);
@@ -203,26 +222,27 @@ export class CharacterController extends TransformNode {
         }
 
         //final movement that takes into consideration the inputs
-        this._moveDirection = this._moveDirection.scaleInPlace(this._inputAmt * CharacterController.PLAYER_SPEED * this._deltaTime);
+        this.moveDirection = this.moveDirection.scaleInPlace(this._inputAmt * CharacterController.PLAYER_SPEED * this.deltaTime);
+
+        //this.mesh.moveWithCollisions(this.moveDirection);
 
         //Rotations
         //check if there is movement to determine if rotation is needed
-        let input = new Vector3(this._input.horizontalAxis, 0, this._input.verticalAxis); //along which axis is the direction
+        let input = new Vector3(this.input.horizontalAxis, 0, this.input.verticalAxis); //along which axis is the direction
 
         if (input.length() == 0) {//if there's no input detected, prevent rotation and keep player in same rotation
             return;
         }
         //rotation based on input & the camera angle
-        let angle = Math.atan2(this._input.horizontalAxis, this._input.verticalAxis);
-        angle += this._camRoot.rotation.y;
+        let angle = Math.atan2(this.input.horizontalAxis, this.input.verticalAxis);
+        angle += this.camTransformDummy.rotation.y;
         let targ = Quaternion.FromEulerAngles(0, angle, 0);
-        this.mesh.rotationQuaternion = Quaternion.Slerp(this.mesh.rotationQuaternion, targ, 10 * this._deltaTime);
-
+        this.mesh.rotationQuaternion = Quaternion.Slerp(this.mesh.rotationQuaternion, targ, 10 * this.deltaTime);
     }
 
-    private _updateGroundDetection(): void {
+    private UpdateGroundDetection(): void {
         if (!this._isGrounded()) {
-            this._gravity = this._gravity.addInPlace(Vector3.Up().scale(this._deltaTime * CharacterController.GRAVITY));
+            this._gravity = this._gravity.addInPlace(Vector3.Up().scale(this.deltaTime * CharacterController.GRAVITY));
             this._grounded = false;
         }
 
@@ -231,7 +251,7 @@ export class CharacterController extends TransformNode {
             this._gravity.y = -CharacterController.JUMP_FORCE;
         }
 
-        this.mesh.moveWithCollisions(this._moveDirection.addInPlace(this._gravity));
+        this.mesh.moveWithCollisions(this.moveDirection.addInPlace(this._gravity));
 
         if (this._isGrounded()) {
             this._gravity.y = 0;
