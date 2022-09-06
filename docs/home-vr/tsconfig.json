@@ -21,6 +21,7 @@
         "babylonjs",
         "babylonjs-loaders",
         "babylonjs-materials",
+        "babylonjs-gui",
     ],
     "files": [
         "./index.ts"

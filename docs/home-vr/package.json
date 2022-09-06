@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "babylonjs": "^5.19.0",
+    "babylonjs-gui": "^5.22.0",
     "babylonjs-loaders": "^5.20.0",
     "babylonjs-materials": "^5.21.0"
   },
