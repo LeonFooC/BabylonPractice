@@ -87,6 +87,10 @@ async function createScene() {
     playerController.AssignCameraToController(camera);
     playerController.SetupBeforeRenderUpdateLoop();
 
+    //const box = MeshBuilder.CreateBox("box", {}, scene); //unit cube
+    //box.scaling = new Vector3(3, 3, 3);
+    //box.position.z = 12;
+
     // create a fuse cursor
     // add a circle reticle using the Fullscreen mode UI
     const fullscreenUI = AdvancedDynamicTexture.CreateFullscreenUI('Fullscreen UI');

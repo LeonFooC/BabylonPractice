@@ -1,4 +1,5 @@
 import { TransformNode, ShadowGenerator, Scene, Mesh, UniversalCamera, ArcRotateCamera, Vector3, Quaternion, Ray, PointerEventTypes, StandardMaterial, Color3, WebXRSessionManager, WebXRCamera, FreeCameraDeviceOrientationInput, VRExperienceHelper, WebXRExperienceHelper, MeshBuilder, WebXRDefaultExperience } from "babylonjs";
+import { Pawn } from "./pawn";
 
 export class CharacterController extends TransformNode {
     public camera: UniversalCamera;
@@ -48,11 +49,15 @@ export class CharacterController extends TransformNode {
             this.CreateCharacterCamera();
         }
 
+        console.log("-------------");
+        console.log(pawn);
+        console.log(this.mesh);
+        console.log(this.mesh.position);
+
         ////shadowGenerator.addShadowCaster(pawnBody.mesh); //the player mesh will cast shadows
 
         this.input = input; //inputs we will get from inputController.ts
     }
-
     public SetupBeforeRenderUpdateLoop() {
         this.scene.registerBeforeRender(() => {
             this.UpdatePhysics();
